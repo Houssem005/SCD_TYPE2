@@ -1,5 +1,5 @@
 import org.apache.spark.sql.{DataFrame, functions}
-import org.apache.spark.sql.functions.{col, lit, max, trim, when}
+import org.apache.spark.sql.functions.{col, lit, max, min, trim, when}
 
 import java.time.LocalDate
 
@@ -7,7 +7,7 @@ object UpdateTableData {
   def updateTable(Updates: DataFrame, History: DataFrame): DataFrame = {
     val currentDate = LocalDate.now
     val column_names = Seq("id", "firstname","lastname","address", "moved_in", "moved_out", "current")
-    val newUpdates = Updates.withColumn("umoved_out",lit(currentDate))
+    val newUpdates = Updates.withColumn("umoved_out",lit(currentDate)).orderBy(col("uid"),col("umoved_in"))
     val UpdatesAndHistory = History.join(newUpdates,History.col("id")=== newUpdates.col("uid"),"fullouter")
     val UpdatesAndHistoryData = UpdatesAndHistory
       .withColumn(
@@ -33,6 +33,7 @@ object UpdateTableData {
       col("action") === "NOACTION"
     ).select(column_names.map(col): _*)
     //for record that needs to be expired and then inserted
+    //inserting
     val InsertedHistory = UpdatesAndHistoryData.filter(
       col("action") === "UPSERT"
     ).select(
@@ -43,13 +44,7 @@ object UpdateTableData {
       col("umoved_in").alias("moved_in"),
       col("umoved_out").alias("moved_out"),
       lit(true).alias("current"))
-    val maxMovedOut = InsertedHistory.groupBy("id").agg(functions.max("moved_in").as("max_moved_in"))
-    val InsertedHistoryData = InsertedHistory.join(maxMovedOut, Seq("id"))
-      .withColumn("is_latest", col("moved_in") === col("max_moved_in"))
-      .withColumn("current", when(col("is_latest") === false, false).otherwise(true))
-      .drop("max_moved_in")
-      .drop("is_latest")
-    val InsertedHistoryRecord = InsertedHistoryData.filter(col("current") === true)
+    //updating
     val UpdatedRecordHistory = UpdatesAndHistoryData.filter(
       col("action") === "UPSERT")
       .withColumn("moved_out", when(
@@ -57,12 +52,41 @@ object UpdateTableData {
       ).otherwise(col("moved_out")))
       .withColumn("current", lit(false))
       .select(column_names.map(col): _*)
-    val maxMovedOutUpdated = UpdatedRecordHistory.groupBy("id", "firstname", "lastname", "address", "moved_in")
-      .agg(max("moved_out").as("max_moved_out"))
-    val UpdatedRecordHistoryData = UpdatedRecordHistory.join(maxMovedOutUpdated, Seq("id", "firstname", "lastname", "address", "moved_in"))
-      .where(col("moved_out") === col("max_moved_out"))
-      .drop("max_moved_out")
-    val UpdatedHistory = NoActionData.union(InsertedData).union(InsertedHistoryRecord).union(UpdatedRecordHistoryData).orderBy(col("id"))
-    UpdatedHistory
+
+    val minMovedOutUpdated = UpdatedRecordHistory
+      .groupBy("id", "firstname", "lastname", "address", "moved_in")
+      .agg(min("moved_out").as("min_moved_out"))
+
+    val UpdatedRecordHistoryData = UpdatedRecordHistory.join(
+      minMovedOutUpdated, Seq("id", "firstname", "lastname", "address", "moved_in"))
+      .where(
+        col("moved_out") === col("min_moved_out"))
+      .drop("min_moved_out")
+
+    val UpdatedHistory = NoActionData.union(InsertedData).union(InsertedHistory).union(UpdatedRecordHistoryData)
+      .orderBy(col("id"),col("moved_in"))
+    val Ordered = UpdatedHistory.alias("h1").join(
+      UpdatedHistory.alias("h2"),
+      col("h1.id") === col("h2.id") && col("h2.moved_in") > col("h1.moved_in")
+    ).groupBy("h1.id", "h1.moved_in").agg(
+      min("h2.moved_in").alias("next_moved_in")
+    )
+    val UpdatedHistoryData = UpdatedHistory.join(Ordered, Seq("id", "moved_in"), "left")
+      .withColumn(
+        "moved_out",
+        when(
+          col("next_moved_in").isNotNull,
+          col("next_moved_in")
+        ).otherwise(currentDate)
+      ).drop("next_moved_in")
+      .select(column_names.map(col): _*)
+      .orderBy(col("id"), col("moved_in")).distinct()
+    val maxMovedOut = UpdatedHistoryData.groupBy("id").agg(max("moved_in").as("max_moved_in"))
+    val UpdatedHistoryRecord = UpdatedHistoryData.join(maxMovedOut, Seq("id"))
+      .withColumn("is_latest", col("moved_in") === col("max_moved_in"))
+      .withColumn("current", when(col("is_latest") === false, false).otherwise(true))
+      .drop("max_moved_in")
+      .drop("is_latest")
+    UpdatedHistoryRecord.orderBy(col("id"),col("moved_in"))
   }
 }
