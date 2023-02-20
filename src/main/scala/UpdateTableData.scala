@@ -29,9 +29,12 @@ object UpdateTableData {
         lit(true).alias("current")
       )
     //for records that need no action
-    val NoActionData = UpdatesAndHistoryData.filter(
-      col("action") === "NOACTION"
-    ).select(column_names.map(col): _*)
+    val NoActionData = UpdatesAndHistoryData.filter(col("action") === "NOACTION")
+      .withColumn("moved_in", when(
+        col("moved_in") > col("umoved_in"), col("umoved_in")
+      ).otherwise(col("moved_in")))
+      .select(
+        column_names.map(col): _*)
     //for record that needs to be expired and then inserted
     //inserting
     val InsertedHistory = UpdatesAndHistoryData.filter(
@@ -65,13 +68,13 @@ object UpdateTableData {
 
     val UpdatedHistory = NoActionData.union(InsertedData).union(InsertedHistory).union(UpdatedRecordHistoryData)
       .orderBy(col("id"),col("moved_in"))
-    val Ordered = UpdatedHistory.alias("h1").join(
+    val Ordered_Moved_IN = UpdatedHistory.alias("h1").join(
       UpdatedHistory.alias("h2"),
       col("h1.id") === col("h2.id") && col("h2.moved_in") > col("h1.moved_in")
     ).groupBy("h1.id", "h1.moved_in").agg(
       min("h2.moved_in").alias("next_moved_in")
     )
-    val UpdatedHistoryData = UpdatedHistory.join(Ordered, Seq("id", "moved_in"), "left")
+    val UpdatedHistoryData = UpdatedHistory.join(Ordered_Moved_IN, Seq("id", "moved_in"), "left")
       .withColumn(
         "moved_out",
         when(

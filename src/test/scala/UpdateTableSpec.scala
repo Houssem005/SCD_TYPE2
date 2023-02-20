@@ -163,7 +163,8 @@ class UpdateTableSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true)
     )
     val updatesDetails = Seq(
-      UpdatesData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01"))
+      UpdatesData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01")),
+      UpdatesData(5, "Houssem", "Abidi", "Thala", Date.valueOf("1996-01-01"))
     )
     val History = historyDetails.toDF
     val Updates = updatesDetails.toDF
@@ -174,9 +175,31 @@ class UpdateTableSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01"), Date.valueOf("1997-12-05"), false)
+      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01"), Date.valueOf("1996-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Thala", Date.valueOf("1996-01-01"), Date.valueOf("1997-12-05"), false),
     ).toDF
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
+  "updateTable" should "Change the moved_in date if there's no change in the address but the moved_in date of the update" +
+    "is lesser than the date of the actual record" in {
+    Given("The input Data")
+    val historyDetails = Seq(
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
+    )
+    val updatesDetails = Seq(
+      UpdatesData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1996-01-05"))
+    )
+    val History = historyDetails.toDF
+    val Updates = updatesDetails.toDF
+
+    When("updateTable is Invoked")
+    val UpdatedHistory = updateTable(Updates, History)
+
+    Then("The Updated Table should be returned")
+    val expectedResult = Seq(
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1996-01-05"), Date.valueOf(currentDate), true)
+    ).toDF
+    UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
+  }
 }
