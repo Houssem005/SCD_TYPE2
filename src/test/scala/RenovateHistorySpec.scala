@@ -70,7 +70,8 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
   "RenovateHistory" should "Insert a new record and Expire the existing record when a person is changing his address" in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf(currentDate), true)
+      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf(currentDate), true),
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1992-02-12"), Date.valueOf("2000-02-12"), false)
     )
     val updatesDetails = Seq(
       UpdatesData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("2016-01-01"))
@@ -80,11 +81,12 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
 
     When("updateTable is Invoked")
     val UpdatedHistory = RenovateHistory(Updates, History)
-    UpdatedHistory.show()
+
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
       HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("2016-01-01"), Date.valueOf(currentDate), true),
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf("2016-01-01"), false)
+      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf("2016-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1992-02-12"), Date.valueOf("2000-02-12"), false)
     ).toDF
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
@@ -143,7 +145,8 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     "of the new records are lesser than the existing record for a certain person" in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true)
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), false),
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1990-12-05"), Date.valueOf("1997-12-05"), true)
     )
     val updatesDetails = Seq(
       UpdatesData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01")),
@@ -160,6 +163,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
       HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01"), Date.valueOf("1996-01-01"), false),
       HistoryData(5, "Houssem", "Abidi", "Thala", Date.valueOf("1996-01-01"), Date.valueOf("1997-12-05"), false),
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1990-12-05"), Date.valueOf("1995-01-01"), false),
     ).toDF
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
