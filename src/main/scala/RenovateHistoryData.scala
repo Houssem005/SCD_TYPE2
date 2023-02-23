@@ -1,16 +1,16 @@
-import UpdatingTable.{ExtractNoActionData, InsertNewPeopleHistory, InsertOldPeopleHistory, OrderingHistoryDates, SetOnlyLatestRecordTrue, UpdateHistory, UpdateOldPeopleRecord, getJoinedHistoryAndUpdate}
+import Utils.{extractNoActionData, insertNewPeopleHistory, insertOldPeopleHistory, orderingHistoryDates, setOnlyLatestRecordTrue, updateHistory, updateOldPeopleRecord, getJoinedHistoryAndUpdate}
 import org.apache.spark.sql.DataFrame
 
 object RenovateHistoryData {
-  def RenovateHistory(Updates: DataFrame, History: DataFrame): DataFrame = {
-    val updatesAndHistoryData = getJoinedHistoryAndUpdate(Updates,History)
-    val InsertedRecords = InsertNewPeopleHistory(updatesAndHistoryData)
-    val NoActionData = ExtractNoActionData(updatesAndHistoryData)
-    val InsertedOldPeopleHistory = InsertOldPeopleHistory(updatesAndHistoryData)
-    val UpdatedRecordHistory = UpdateOldPeopleRecord(updatesAndHistoryData)
-    val UpdatedHistory = UpdateHistory(InsertedRecords,NoActionData,InsertedOldPeopleHistory,UpdatedRecordHistory)
-    val OrderedUpdatedHistory =OrderingHistoryDates(UpdatedHistory)
-    val RenovatedHistory = SetOnlyLatestRecordTrue(OrderedUpdatedHistory)
+  def renovateHistory(Updates: DataFrame, History: DataFrame): DataFrame = {
+    val UpdatesAndHistoryData = getJoinedHistoryAndUpdate(Updates,History)
+    val InsertedRecords = insertNewPeopleHistory(UpdatesAndHistoryData)
+    val NoActionData = extractNoActionData(UpdatesAndHistoryData)
+    val InsertedOldPeopleHistory = insertOldPeopleHistory(UpdatesAndHistoryData)
+    val UpdatedRecordHistory = updateOldPeopleRecord(UpdatesAndHistoryData)
+    val UpdatedHistory = updateHistory(InsertedRecords,NoActionData,InsertedOldPeopleHistory,UpdatedRecordHistory)
+    val OrderedUpdatedHistory =orderingHistoryDates(UpdatedHistory)
+    val RenovatedHistory = setOnlyLatestRecordTrue(OrderedUpdatedHistory)
     RenovatedHistory
   }
 }

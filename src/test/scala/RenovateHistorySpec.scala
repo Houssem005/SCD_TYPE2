@@ -1,4 +1,4 @@
-import RenovateHistoryData.RenovateHistory
+import RenovateHistoryData.renovateHistory
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.scalatest.GivenWhenThen
@@ -17,7 +17,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     .getOrCreate()
   import spark.implicits._
   val currentDate = LocalDate.now
-  "RenovateHistory" should "Insert data from Updates to History when there's new records" in {
+  "renovateHistory" should "Insert data from Updates to History when there's new records" in {
     Given("The input Data")
     val historyDetails = Seq(
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1992-02-01"), Date.valueOf("2000-02-12"), false),
@@ -31,7 +31,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates,History)
+    val UpdatedHistory = renovateHistory(Updates,History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
@@ -43,7 +43,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "store coming data of a new person ordered" in {
+  "renovateHistory" should "store coming data of a new person ordered" in {
     Given("The input Data")
     val historyDetails = Seq(
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true)
@@ -56,7 +56,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
@@ -67,7 +67,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "Insert a new record and Expire the existing record when a person is changing his address" in {
+  "renovateHistory" should "Insert a new record and Expire the existing record when a person is changing his address" in {
     Given("The input Data")
     val historyDetails = Seq(
       HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf(currentDate), true),
@@ -80,7 +80,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
@@ -91,7 +91,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "Do nothing if the values did not change" in {
+  "renovateHistory" should "Do nothing if the values did not change" in {
     Given("The input Data")
     val historyDetails = Seq(
       HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("2000-02-12"), Date.valueOf(currentDate), true)
@@ -103,7 +103,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
@@ -112,41 +112,37 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "Insert new records and Expire the existing record when there are multiple updates for a certain person" in {
+  "renovateHistory" should "Insert new records when there are multiple updates for a certain person" in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("2000-12-05"), Date.valueOf(currentDate), true),
-      HistoryData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("1996-12-05"), Date.valueOf("1997-12-05"), false),
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("2000-12-05"), false)
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1960-12-05"), Date.valueOf("1970-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("1980-12-05"), Date.valueOf("2000-01-01"), false)
     )
     val updatesDetails = Seq(
-      UpdatesData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1994-01-01")),
-      UpdatesData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1998-01-01")),
-      UpdatesData(5, "Houssem", "Abidi", "Thala", Date.valueOf("1990-01-01"))
+      UpdatesData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("2022-01-05")),
+      UpdatesData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1990-01-05"))
     )
     val History = historyDetails.toDF
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Thala", Date.valueOf("1990-01-01"), Date.valueOf("1994-01-01"), false),
-      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1994-01-01"), Date.valueOf("1996-12-05"), false),
-      HistoryData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("1996-12-05"), Date.valueOf("1997-12-05"), false),
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("1998-01-01"), false),
-      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1998-01-01"), Date.valueOf("2000-12-05"), false),
-      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("2000-12-05"), Date.valueOf(currentDate), true)
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1960-12-05"), Date.valueOf("1970-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("1980-12-05"), Date.valueOf("1990-01-05"), false),
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1990-01-05"), Date.valueOf("2000-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("2022-01-05"), Date.valueOf(currentDate), true)
     ).toDF
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "Insert new records to History with false as current if the date " +
+  "renovateHistory" should "Insert new records to History with false as current if the date " +
     "of the new records are lesser than the existing record for a certain person" in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), false),
-      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1990-12-05"), Date.valueOf("1997-12-05"), true)
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
+      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1990-12-05"), Date.valueOf("1997-12-05"), false)
     )
     val updatesDetails = Seq(
       UpdatesData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1995-01-01")),
@@ -156,7 +152,7 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
@@ -168,26 +164,26 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "RenovateHistory" should "Change the moved_in date if there's no change in the address but the moved_in date of the update" +
-    "is lesser than the date of the actual record" in {
+  "renovateHistory" should "Update a person's data even in the further past" in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
-      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1990-12-05"), Date.valueOf("1997-12-05"), false),
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1960-12-05"), Date.valueOf("1970-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("1980-12-05"), Date.valueOf("2000-01-01"), false)
     )
     val updatesDetails = Seq(
-      UpdatesData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1996-01-05"))
+      UpdatesData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1990-01-05"))
     )
     val History = historyDetails.toDF
     val Updates = updatesDetails.toDF
 
     When("updateTable is Invoked")
-    val UpdatedHistory = RenovateHistory(Updates, History)
+    val UpdatedHistory = renovateHistory(Updates, History)
 
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("1996-01-05"), Date.valueOf(currentDate), true),
-      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1990-12-05"), Date.valueOf("1996-01-05"), false),
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1960-12-05"), Date.valueOf("1970-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("1980-12-05"), Date.valueOf("1990-01-05"), false),
+      HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1990-01-05"), Date.valueOf("2000-01-01"), false)
     ).toDF
     UpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }

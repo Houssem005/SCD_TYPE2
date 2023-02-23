@@ -1,9 +1,10 @@
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.{col, lit, max, min, when}
+import org.apache.spark.sql.expressions.Window
+import org.apache.spark.sql.functions.{array, col, explode, lead, lit, max, min, when}
 
 import java.time.LocalDate
 
-object UpdatingTable {
+object Utils {
   val currentDate = LocalDate.now
   val column_names = Seq("id", "firstname","lastname","address", "moved_in", "moved_out", "current")
 
@@ -18,7 +19,7 @@ object UpdatingTable {
       )
     updatesAndHistoryData
   }
-  def InsertNewPeopleHistory(updatesAndHistoryData: DataFrame): DataFrame ={
+  def insertNewPeopleHistory(updatesAndHistoryData: DataFrame): DataFrame ={
     val InsertedRecords = updatesAndHistoryData.filter(col("action")==="INSERT")
       .select(
         col("uid").alias("id"),
@@ -31,7 +32,7 @@ object UpdatingTable {
       )
     InsertedRecords
   }
-  def ExtractNoActionData(updatesAndHistoryData: DataFrame): DataFrame ={
+  def extractNoActionData(updatesAndHistoryData: DataFrame): DataFrame ={
     val NoActionData =updatesAndHistoryData.filter(col("action")==="NOACTION")
       .withColumn("moved_in",
         when(col("moved_in")>col("umoved_in"),col("umoved_in"))
@@ -39,7 +40,7 @@ object UpdatingTable {
       .select(column_names.map(col): _*)
     NoActionData
   }
-  def InsertOldPeopleHistory(UpdatesAndHistory: DataFrame): DataFrame = {
+  def insertOldPeopleHistory(UpdatesAndHistory: DataFrame): DataFrame = {
     val OldPeopleHistory = UpdatesAndHistory.filter(
       col("action")==="UPSERT"
     ).select(
@@ -52,7 +53,7 @@ object UpdatingTable {
       lit(true).alias("current"))
     OldPeopleHistory
   }
-  def UpdateOldPeopleRecord(UpdatesAndHistory: DataFrame): DataFrame = {
+  def updateOldPeopleRecord(UpdatesAndHistory: DataFrame): DataFrame = {
     val UpdatedRecordHistory = UpdatesAndHistory.filter(
       col("action")==="UPSERT"
     ).withColumn("moved_out",when(
@@ -68,35 +69,42 @@ object UpdatingTable {
       .drop("min_moved_out")
     UpdatedRecordHistoryData
   }
-  def UpdateHistory(NoActionData: DataFrame,InsertedData:DataFrame,InsertedHistory:DataFrame,UpdatedRecordHistoryData:DataFrame): DataFrame = {
+  def updateHistory(NoActionData: DataFrame,InsertedData:DataFrame,InsertedHistory:DataFrame,UpdatedRecordHistoryData:DataFrame): DataFrame = {
     val UpdatedHistory = NoActionData.union(InsertedData).union(InsertedHistory).union(UpdatedRecordHistoryData)
-      .orderBy(col("id"), col("moved_in"))
+      .orderBy(col("id"), col("moved_in")).distinct()
     UpdatedHistory
   }
-  def OrderingHistoryDates(UpdatedHistory:DataFrame): DataFrame = {
-    val Ordering_Moved_IN = UpdatedHistory.alias("h1").join(
-      UpdatedHistory.alias("h2"),
-      col("h1.id")===col("h2.id") && col("h2.moved_in")>col("h1.moved_in")
-    ).groupBy("h1.id","h1.moved_in").agg(
-      min("h2.moved_in").alias("next_moved_in")
-    )
-    val OrderedUpdatedHistory = UpdatedHistory.join(Ordering_Moved_IN,Seq("id","moved_in"),"left")
-      .withColumn(
-        "moved_out",
-        when(
-          col("next_moved_in").isNotNull,
-          col("next_moved_in")
-        ).otherwise(currentDate)
-      ).drop("next_moved_in")
-      .select(column_names.map(col):_*)
-      .orderBy(col("id"),col("moved_in")).distinct()
+  def orderingHistoryDates(UpdatedHistory:DataFrame): DataFrame = {
+    val sortedDates = UpdatedHistory
+      .withColumn("dates", array(col("moved_in"), col("moved_out")))
+      .withColumn("all_dates", explode(col("dates")))
+      .select(col("id"), col("all_dates"))
+      .orderBy(col("id"), col("all_dates"))
+      .distinct()
+
+    val window = Window.partitionBy("id").orderBy("all_dates")
+    val SortedRecords = sortedDates.withColumn("moved_out", lead("all_dates", 1).over(window))
+      .select("id", "all_dates", "moved_out")
+      .withColumnRenamed("all_dates", "moved_in")
+    val SortedRecordsData = SortedRecords.select(
+      col("id").alias("sid"),
+      col("moved_in").alias("smoved_in"),
+      col("moved_out").alias("smoved_out"))
+    val UpdatedHistoryInfo = UpdatedHistory.join(SortedRecordsData, SortedRecordsData.col("sid") === UpdatedHistory.col("id")
+      && SortedRecordsData.col("smoved_in") === UpdatedHistory.col("moved_in"), "left")
+    val OrderedUpdatedHistory = UpdatedHistoryInfo
+      .withColumn("moved_out",
+        col("smoved_out"))
+      .drop("sid", "smoved_in", "smoved_out")
     OrderedUpdatedHistory
   }
-  def SetOnlyLatestRecordTrue(OrderedUpdatedHistory:DataFrame): DataFrame = {
+  def setOnlyLatestRecordTrue(OrderedUpdatedHistory:DataFrame): DataFrame = {
     val MaxMovedIN = OrderedUpdatedHistory.groupBy("id").agg(max("moved_in").alias("max_moved_in"))
     val history = OrderedUpdatedHistory.join(MaxMovedIN,Seq("id"))
       .withColumn("is_latest",col("moved_in")===col("max_moved_in"))
-      .withColumn("current",when(col("is_latest")===false,false).otherwise(true))
+      .withColumn("current",
+        when(col("is_latest") === false, false)
+          .when(col("moved_out") =!= currentDate, false).otherwise(true))
       .drop("max_moved_in")
       .drop("is_latest")
     history.orderBy(col("id"),col("moved_in"))
