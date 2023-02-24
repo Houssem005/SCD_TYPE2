@@ -208,7 +208,7 @@ class UtilsSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     val InsertedOldPeopleHistory = insertOldPeopleHistory(UpdatesAndHistoryData)
     val UpdatedRecordHistory = updateOldPeopleRecord(UpdatesAndHistoryData)
     val UpdatedHistory = updateHistory(InsertedRecords, NoActionData, InsertedOldPeopleHistory, UpdatedRecordHistory)
-    UpdatedHistory.show()
+
     When("orderingHistoryDates is Invoked")
     val OrderedUpdatedHistory = orderingHistoryDates(UpdatedHistory)
     Then("The Updated Table should be returned")

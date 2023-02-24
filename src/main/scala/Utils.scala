@@ -61,7 +61,6 @@ object Utils {
       ).otherwise(col("moved_out")))
       .withColumn("current", lit(false))
       .select(column_names.map(col): _*)
-      .filter(col("moved_out") > col("moved_in"))
     val minMovedOutUpdating = UpdatedRecordHistory.groupBy("id", "firstname", "lastname", "address", "moved_in")
       .agg(min("moved_out").as("min_moved_out"))
 

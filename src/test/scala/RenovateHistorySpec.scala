@@ -153,7 +153,6 @@ class RenovateHistorySpec extends AnyFlatSpec with Matchers with GivenWhenThen {
 
     When("updateTable is Invoked")
     val UpdatedHistory = renovateHistory(Updates, History)
-
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
       HistoryData(5, "Houssem", "Abidi", "Feriana", Date.valueOf("1997-12-05"), Date.valueOf(currentDate), true),
