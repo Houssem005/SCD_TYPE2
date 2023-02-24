@@ -221,8 +221,8 @@ class UtilsSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     OrderedUpdatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
 
-  "setOnlyLatestRecordTrue" should "change only the record of a certain person with the moved_out as current date to true " +
-    "and all the others to false " in {
+  "setOnlyLatestRecordTrue" should "change only the record of a certain person form the new ordered history" +
+    " with the moved_out as current date to true and all the others to false " in {
     Given("The input Data")
     val OrderedHistoryData = Seq(
       HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("2000-01-05"), Date.valueOf(currentDate), true),
@@ -241,7 +241,8 @@ class UtilsSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     ).toDF()
     RenovatedHistory.collect() should contain theSameElementsAs expectedResult.collect()
   }
-  "setOnlyLatestRecordTrue" should "change all the records as false if the moved_out is different than current date" in {
+  "setOnlyLatestRecordTrue" should "change all the records of the new ordered history as false " +
+    "if the moved_out is different than current date" in {
     Given("The input Data")
     val OrderedHistoryData = Seq(
       HistoryData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("2000-01-05"), Date.valueOf("2005-01-01"), true),
