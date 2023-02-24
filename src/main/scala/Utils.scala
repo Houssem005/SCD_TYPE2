@@ -55,17 +55,18 @@ object Utils {
   }
   def updateOldPeopleRecord(UpdatesAndHistory: DataFrame): DataFrame = {
     val UpdatedRecordHistory = UpdatesAndHistory.filter(
-      col("action")==="UPSERT"
-    ).withColumn("moved_out",when(
-      col("current")===true,col("umoved_out")
-    ).otherwise(col("moved_out")))
-      .withColumn("current",lit(false))
-      .select(column_names.map(col):_*)
-    val minMovedOut = UpdatedRecordHistory.groupBy(
-      "id","firstname","address","lastname","moved_in")
+      col("action") === "UPSERT")
+      .withColumn("moved_out", when(
+        col("current") === true, col("umoved_in")
+      ).otherwise(col("moved_out")))
+      .withColumn("current", lit(false))
+      .select(column_names.map(col): _*)
+      .filter(col("moved_out") > col("moved_in"))
+    val minMovedOutUpdating = UpdatedRecordHistory.groupBy("id", "firstname", "lastname", "address", "moved_in")
       .agg(min("moved_out").as("min_moved_out"))
-    val UpdatedRecordHistoryData = UpdatedRecordHistory.join(minMovedOut,Seq("id","firstname","lastname","address","moved_in"))
-      .where(col("moved_out")===col("min_moved_out"))
+
+    val UpdatedRecordHistoryData = UpdatedRecordHistory.join(minMovedOutUpdating, Seq("id", "firstname", "lastname", "address", "moved_in"))
+      .where(col("moved_out") === col("min_moved_out"))
       .drop("min_moved_out")
     UpdatedRecordHistoryData
   }
