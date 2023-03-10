@@ -61,12 +61,14 @@ object Utils {
       ).otherwise(col("moved_out")))
       .withColumn("current", lit(false))
       .select(column_names.map(col): _*)
-    val minMovedOutUpdating = UpdatedRecordHistory.groupBy("id", "firstname", "lastname", "address", "moved_in")
-      .agg(min("moved_out").as("min_moved_out"))
+    val windowSpec = Window.partitionBy("id", "firstname", "lastname", "address", "moved_in")
+      .orderBy(col("moved_out").asc_nulls_last)
 
-    val UpdatedRecordHistoryData = UpdatedRecordHistory.join(minMovedOutUpdating, Seq("id", "firstname", "lastname", "address", "moved_in"))
+    val UpdatedRecordHistoryData = UpdatedRecordHistory.withColumn("min_moved_out",
+      min(col("moved_out")).over(windowSpec))
       .where(col("moved_out") === col("min_moved_out"))
       .drop("min_moved_out")
+
     UpdatedRecordHistoryData
   }
   def updateHistory(NoActionData: DataFrame,InsertedData:DataFrame,InsertedHistory:DataFrame,UpdatedRecordHistoryData:DataFrame): DataFrame = {
@@ -81,7 +83,6 @@ object Utils {
       .select(col("id"), col("all_dates"))
       .orderBy(col("id"), col("all_dates"))
       .distinct()
-
     val window = Window.partitionBy("id").orderBy("all_dates")
     val SortedRecords = sortedDates.withColumn("moved_out", lead("all_dates", 1).over(window))
       .select("id", "all_dates", "moved_out")
@@ -99,7 +100,12 @@ object Utils {
     OrderedUpdatedHistory
   }
   def setOnlyLatestRecordTrue(OrderedUpdatedHistory:DataFrame): DataFrame = {
-    val MaxMovedIN = OrderedUpdatedHistory.groupBy("id").agg(max("moved_in").alias("max_moved_in"))
+    val windowSpec = Window.partitionBy("id").orderBy(col("moved_in").desc)
+
+    val MaxMovedIN = OrderedUpdatedHistory
+      .withColumn("max_moved_in", max(col("moved_in")).over(windowSpec))
+      .filter(col("moved_in") === col("max_moved_in"))
+      .drop("moved_in","moved_out","firstname","lastname","address","current")
     val history = OrderedUpdatedHistory.join(MaxMovedIN,Seq("id"))
       .withColumn("is_latest",col("moved_in")===col("max_moved_in"))
       .withColumn("current",
