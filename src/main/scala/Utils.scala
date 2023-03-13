@@ -51,13 +51,13 @@ object Utils {
       col("umoved_in").alias("moved_in"),
       col("umoved_out").alias("moved_out"),
       lit(true).alias("current"))
-    OldPeopleHistory
+    OldPeopleHistory.distinct()
   }
   def updateOldPeopleRecord(UpdatesAndHistory: DataFrame): DataFrame = {
     val UpdatedRecordHistory = UpdatesAndHistory.filter(
       col("action") === "UPSERT")
       .withColumn("moved_out", when(
-        col("current") === true, col("umoved_in")
+        col("current") === true && col("moved_out")<col("umoved_in"), col("umoved_in")
       ).otherwise(col("moved_out")))
       .withColumn("current", lit(false))
       .select(column_names.map(col): _*)
@@ -67,6 +67,7 @@ object Utils {
     val UpdatedRecordHistoryData = UpdatedRecordHistory.join(minMovedOutUpdating, Seq("id", "firstname", "lastname", "address", "moved_in"))
       .where(col("moved_out") === col("min_moved_out"))
       .drop("min_moved_out")
+      .distinct()
     UpdatedRecordHistoryData
   }
   def updateHistory(NoActionData: DataFrame,InsertedData:DataFrame,InsertedHistory:DataFrame,UpdatedRecordHistoryData:DataFrame): DataFrame = {

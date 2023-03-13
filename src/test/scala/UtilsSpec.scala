@@ -155,18 +155,21 @@ class UtilsSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
     "if the coming date is superior than the actual one and update the status " in {
     Given("The input Data")
     val historyDetails = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("2000-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("1998-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1998-12-05"), Date.valueOf("2000-01-01"), false),
       HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("2000-12-05"), Date.valueOf(currentDate), true)
     ).toDF
     val updatesDetails = Seq(
-      UpdatesData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("2002-01-05"))
+      UpdatesData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("2002-01-05")),
+      UpdatesData(5, "Houssem", "Abidi", "Ariana", Date.valueOf("2020-01-05"))
     ).toDF
     val UpdatesAndHistoryData = getJoinedHistoryAndUpdate(updatesDetails,historyDetails)
     When("updateOldPeopleRecord is Invoked")
     val UpdatedRecordHistoryData = updateOldPeopleRecord(UpdatesAndHistoryData)
     Then("The Updated Table should be returned")
     val expectedResult = Seq(
-      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("2000-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Sousse", Date.valueOf("1997-12-05"), Date.valueOf("1998-01-01"), false),
+      HistoryData(5, "Houssem", "Abidi", "Kasserine", Date.valueOf("1998-12-05"), Date.valueOf("2000-01-01"), false),
       HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("2000-12-05"), Date.valueOf("2002-01-05"), false)
     ).toDF()
     UpdatedRecordHistoryData.collect() should contain theSameElementsAs expectedResult.collect()
@@ -178,7 +181,7 @@ class UtilsSpec extends AnyFlatSpec with Matchers with GivenWhenThen {
       HistoryData(5, "Houssem", "Abidi", "Tunis", Date.valueOf("2000-12-05"), Date.valueOf("2002-01-05"), false)
     ).toDF
     val updatesDetails = Seq(
-      UpdatesData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("2016-01-05"))
+      UpdatesData(5, "Houssem", "Abidi", "Gafsa", Date.valueOf("1960-01-05"))
     ).toDF
     val UpdatesAndHistoryData = getJoinedHistoryAndUpdate(updatesDetails, historyDetails)
     When("updateOldPeopleRecord is Invoked")
